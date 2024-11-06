@@ -1,0 +1,39 @@
+#!/bin/ksh
+set -e
+typeset -a branches=(
+    master
+    develop
+    vader
+    uat
+)
+typeset -A remotes=(
+    [github]="<sending repo>"
+    [bitbucket]="<receiveing repo>"
+)
+typeset toRemote="github"
+typeset fromRemote="bitbucket"
+typeset -a pushArgs=()
+function usage {
+    echo "usage: updateBranches [-f]"
+}
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f) pushArgs+=(-f) ;;
+        -h) usage && exit 0 ;;
+        *) usage && exit 1 ;;
+    esac
+    shift
+done
+for remote in "${!remotes[@]}"; do
+    if ! git remote get-url "$remote" >/dev/null 2>&1; then
+        echo "Adding remote: $remote"
+        git remote add "$remote" "${remotes[$remote]}"
+    fi
+    echo "Fetching remote: $remote"
+    git fetch "$remote"
+done
+
+for branch in "${branches[@]}"; do
+    echo "Pushing $branch from $fromRemote to $toRemote"
+    git push "${pushArgs[@]}" "$toRemote" "$fromRemote"/"$branch":refs/heads/"$branch"
+done
